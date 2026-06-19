@@ -1,0 +1,12 @@
+*.cache/
+*.ip_user_files/
+*.sim/
+*.runs/
+*.gen/
+*.hbs/
+.Xil/
+*.jou
+*.log
+*.bit
+*.ltx
+*.mcs

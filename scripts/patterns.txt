@@ -1,0 +1,11 @@
+../../
+
+#creds
+passwd
+shadow
+
+<script>
+cmd.exe
+
+attack
+malware
