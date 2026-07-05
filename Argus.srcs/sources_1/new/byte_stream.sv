@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
-// Engineer: 
+// Engineer: Rishi Bala
 // 
 // Create Date: 07/04/2026 11:58:58 PM
 // Design Name: 
@@ -19,8 +19,26 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
+interface byte_stream_if(
+    input logic clk,
+    input logic rst_n
+);
+    logic valid;
+    logic [7:0] data;
+    logic ready;
 
-module byte_stream(
-
+    modport dut_mp(
+        input valid,
+        input data,
+        output ready
     );
-endmodule
+
+    clocking driver_cb @(posedge clk);
+        output valid, data;
+        input ready;
+    endclocking
+
+    clocking monitor_cb @(posedge clk);
+        input valid, data, ready;
+    endclocking
+endinterface
