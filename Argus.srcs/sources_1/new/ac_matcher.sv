@@ -21,10 +21,10 @@
 
 
 module ac_matcher #(
-  parameter int STATE_W = 6,
-  parameter int MATCH_ID_W = 8,
-  parameter int NUM_STATES = 47,
-  parameter logic [STATE_W-1:0] ROOT_STATE = 0,
+  parameter int state_w = 6,
+  parameter int match_id = 8,
+  parameter int numStates = 47,
+  parameter logic [state_w-1:0] ROOT_STATE = 0,
   parameter string MATCH_FILE = "match.mem")
   (input logic clk,
   input logic rst_n,
@@ -33,23 +33,51 @@ module ac_matcher #(
   match_out.dut_mp mout
 );
 
-  typedef enum logic {S_IDLE, S_LOOKUP} state_e;
+  typedef enum logic {idle, lookup} state_e;
   state_e fsm;
  
-  logic [STATE_W-1:0] current_state;
+  logic [state_w-1:0] current_state;
   logic [7:0] in_byte;
-  logic [STATE_W-1:0] next_state;
+  logic [state_w-1:0] next_state;
  
-  logic [MATCH_ID_W-1:0] match_rom [NUM_STATES]; //from match.mem
+  logic [match_id-1:0] match_rom [numStates]; //from match.mem
   initial $readmemh(MATCH_FILE, match_rom);
 
-  assign next_state = mem_bus.row_data[in_byte*STATE_W +: STATE_W]; //256 transitions for one state
+  assign next_state = mem_bus.row_data[in_byte*state_w +: state_w]; //256 transitions for one state
  
-  assign stream.ready = (fsm == S_IDLE); //only when idle
-  assign mem_bus.req = (fsm == S_LOOKUP);
+  assign stream.ready = (fsm == idle); //only when idle
+  assign mem_bus.req = (fsm == lookup);
   assign mem_bus.state_addr = current_state;
  
   assign mout.current_state = current_state;
+  
+    always_ff @(posedge clk) begin
+    if (!rst_n) begin
+      fsm <= idle;
+      current_state <= ROOT_STATE;
+      in_byte <= 0;
+      mout.match_valid <= 0;
+      mout.match_id <= 0;
+    end else begin
+      mout.match_valid <= 0;
+      case (fsm)
+        idle: begin
+          if (stream.valid && stream.ready) begin
+            in_byte <= stream.data;
+            fsm <= lookup;
+          end
+        end
+        lookup: begin
+          if (mem_bus.ack) begin
+            current_state <= next_state;
+            mout.match_id <= match_rom[next_state];
+            mout.match_valid <= (match_rom[next_state] != 0);
+            fsm <= idle;
+          end
+        end
+      endcase
+    end
+  end
 
 
 endmodule
