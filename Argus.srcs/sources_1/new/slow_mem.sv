@@ -51,4 +51,43 @@ logic [$clog2(latency+1)-1:0] cnt;
 logic [state_w-1:0] addr_q;
 logic [row_w-1:0] row_q;
 
+always_ff @(posedge clk) begin
+if (!rst_n) begin
+  fsm <= s_idle;
+  cnt <= 0;
+  addr_q <= 0;
+  row_q <= 0;
+  mem_bus.ack <= 0;
+end else begin
+  case (fsm)
+    s_idle: begin
+      mem_bus.ack <= 0;
+      if (mem_bus.req) begin
+        addr_q <= mem_bus.state_addr;
+        cnt <= 1;
+        fsm <= s_wait;
+      end
+    end
+    s_wait: begin
+      if (cnt == latency) begin
+        row_q <= build_row(addr_q);
+        mem_bus.ack <= 1;
+        fsm <= s_done;
+      end else begin
+        cnt <= cnt + 1;
+      end
+    end
+    s_done: begin
+      //hold ack and data until the matcher takes it and drops req
+      if (!mem_bus.req) begin
+        mem_bus.ack <= 0;
+        fsm <= s_idle;
+      end
+    end
+  endcase
+end
+end
+
+assign mem_bus.row_data = row_q;
+
 endmodule
