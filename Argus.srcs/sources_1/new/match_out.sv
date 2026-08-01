@@ -19,7 +19,7 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-interface match_out_if #(
+interface match_out #(
     parameter STATE_W = 6
 )(
     input logic clk,
