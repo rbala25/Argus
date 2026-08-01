@@ -21,6 +21,25 @@
 
 
 module argus_top(
+  input logic clk,
+  input logic rst_n
+);
 
-    );
+byte_stream stream_if(clk, rst_n);
+mem mem_if(clk, rst_n);
+match_out match_if(clk, rst_n);
+
+ac_matcher matcher(
+.clk(clk),
+.rst_n(rst_n),
+.stream(stream_if),
+.mem_bus(mem_if),
+.mout(match_if)
+);
+
+slow_mem model(
+.clk(clk),
+.rst_n(rst_n),
+.mem_bus(mem_if)
+);
 endmodule
