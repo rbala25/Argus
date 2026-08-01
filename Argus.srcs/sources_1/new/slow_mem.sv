@@ -78,8 +78,7 @@ end else begin
       end
     end
     s_done: begin
-      //hold ack and data until the matcher takes it and drops req
-      if (!mem_bus.req) begin
+      if (!mem_bus.req) begin //hold ack
         mem_bus.ack <= 0;
         fsm <= s_idle;
       end
