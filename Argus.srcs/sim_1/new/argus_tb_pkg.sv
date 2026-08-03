@@ -155,4 +155,48 @@ class ac_monitor extends uvm_monitor; //monitor
   endtask
 endclass
 
+class ac_scoreboard extends uvm_scoreboard; //scoreboard
+  `uvm_component_utils(ac_scoreboard)
+
+  uvm_analysis_imp_bytes #(ac_byte_item, ac_scoreboard) bytes_imp;
+  uvm_analysis_imp_matches #(ac_match_item, ac_scoreboard) matches_imp;
+
+  byte byte_buf[$];
+  ac_match_item match_q[$];
+  string patterns[int]; //match_id -> pattern string
+
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    bytes_imp = new("bytes_imp", this);
+    matches_imp = new("matches_imp", this);
+    //add entries here if you add patterns to patterns.txt
+    patterns[5] = "cmd.exe";
+    patterns[6] = "attack";
+    patterns[7] = "malware";
+  endfunction
+
+  function void write_bytes(ac_byte_item item);
+    byte_buf.push_back(byte'(item.data));
+  endfunction
+
+  function void write_matches(ac_match_item item);
+    ac_match_item copy;
+    copy = ac_match_item::type_id::create("copy");
+    copy.match_id = item.match_id;
+    copy.byte_cnt = item.byte_cnt;
+    match_q.push_back(copy);
+  endfunction
+
+  function void check_phase(uvm_phase phase);
+    super.check_phase(phase);
+    `uvm_info("SB", $sformatf("stream=%0d bytes  matches=%0d",
+      byte_buf.size(), match_q.size()), UVM_LOW)
+    check_false_positives();
+    check_false_negatives();
+  endfunction
+
 endpackage
