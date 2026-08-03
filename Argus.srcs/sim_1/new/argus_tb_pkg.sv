@@ -163,7 +163,7 @@ class ac_scoreboard extends uvm_scoreboard; //scoreboard
 
   byte byte_buf[$];
   ac_match_item match_q[$];
-  string patterns[int]; //match_id -> pattern string
+  string patterns[int];
 
   function new(string name, uvm_component parent);
     super.new(name, parent);
@@ -172,8 +172,7 @@ class ac_scoreboard extends uvm_scoreboard; //scoreboard
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
     bytes_imp = new("bytes_imp", this);
-    matches_imp = new("matches_imp", this);
-    //add entries here if you add patterns to patterns.txt
+    matches_imp = new("matches_imp", this); //check this again
     patterns[5] = "cmd.exe";
     patterns[6] = "attack";
     patterns[7] = "malware";
@@ -198,5 +197,75 @@ class ac_scoreboard extends uvm_scoreboard; //scoreboard
     check_false_positives();
     check_false_negatives();
   endfunction
+  
+  function void check_false_positives(); //is this logic right
+    foreach (match_q[i]) begin
+      int id = int'(match_q[i].match_id);
+      if (!patterns.exists(id)) begin
+        `uvm_error("SB", $sformatf("UNKNOWN id=%0d reported", id))
+        continue;
+      end
+      if (!pat_in_buf(patterns[id]))
+        `uvm_error("SB", $sformatf("FALSE POS: id=%0d (%s) not in stream", id, patterns[id]))
+      else
+        `uvm_info("SB", $sformatf("PASS: id=%0d (%s) found in stream", id, patterns[id]), UVM_LOW)
+    end
+  endfunction
+
+  function void check_false_negatives(); //present patterns
+    foreach (patterns[id]) begin
+      if (pat_in_buf(patterns[id]) && !id_matched(id))
+        `uvm_error("SB", $sformatf("FALSE NEG: id=%0d (%s) in stream, no match fired",
+          id, patterns[id]))
+    end
+  endfunction
+
+  function bit pat_in_buf(string pat);
+    int plen = pat.len();
+    int blen = byte_buf.size();
+    if (plen > blen) return 0;
+    for (int i = 0; i <= blen - plen; i++) begin
+      bit ok = 1;
+      for (int j = 0; j < plen; j++) begin
+        if (byte_buf[i+j] != byte'(pat[j])) begin
+          ok = 0; break;
+        end
+      end
+      if (ok) return 1;
+    end
+    return 0;
+  endfunction
+
+  function bit id_matched(int id);
+    foreach (match_q[i])
+      if (int'(match_q[i].match_id) == id) return 1;
+    return 0;
+  endfunction
+endclass
+
+
+
+class ac_agent extends uvm_agent; //agent
+  `uvm_component_utils(ac_agent)
+
+  ac_driver drv;
+  ac_monitor mon;
+  ac_sequencer seqr;
+
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    drv  = ac_driver::type_id::create("drv",  this);
+    mon  = ac_monitor::type_id::create("mon",  this);
+    seqr = ac_sequencer::type_id::create("seqr", this);
+  endfunction
+
+  function void connect_phase(uvm_phase phase);
+    drv.seq_item_port.connect(seqr.seq_item_export);
+  endfunction
+endclass
 
 endpackage
