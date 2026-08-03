@@ -46,16 +46,17 @@ slow_mem #(.latency(5), .mem_file("C:/Vivado/Argus/scripts/transition.mem")) mod
   .mem_bus(mem_if)
 );
 string test_str = "attack detected, running cmd.exe, found malware";
- 
+
 task automatic drive_bytes(input string s);
-for (int i = 0; i < s.len(); i++) begin
-  stream_if.data = s[i];
-  stream_if.valid = 1;
-  @(posedge clk);
-  while (!stream_if.ready) @(posedge clk);
-end
-stream_if.valid = 0;
-stream_if.data = 0;
+    for (int i = 0; i < s.len(); i++) begin
+      @(posedge clk);
+      stream_if.data = s[i];
+      stream_if.valid = 1;
+      while (!stream_if.ready) @(posedge clk);
+    end
+    @(posedge clk);
+    stream_if.valid = 0;
+    stream_if.data = 0;
 endtask
 
 int nbytes; //monitor, byte count
