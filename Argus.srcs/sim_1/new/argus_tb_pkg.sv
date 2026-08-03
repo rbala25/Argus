@@ -34,4 +34,77 @@ import uvm_pkg::*;
 `uvm_analysis_imp_decl(_bytes)
 `uvm_analysis_imp_decl(_matches)
 
+class ac_byte_item extends uvm_sequence_item; //transactions
+  `uvm_object_utils(ac_byte_item)
+  rand logic [7:0] data;
+
+  function new(string name = "ac_byte_item");
+    super.new(name);
+  endfunction
+
+  function string convert2string();
+    return $sformatf("0x%02x('%c')", data, data);
+  endfunction
+endclass
+
+class ac_match_item extends uvm_object;
+  `uvm_object_utils(ac_match_item)
+  logic [3:0] match_id;
+  int unsigned byte_cnt; //byte cnt when match fired
+
+  function new(string name = "ac_match_item");
+    super.new(name);
+  endfunction
+
+  function string convert2string();
+    return $sformatf("id=%0d byte_cnt=%0d", match_id, byte_cnt);
+  endfunction
+endclass
+
+
+
+
+typedef uvm_sequencer #(ac_byte_item) ac_sequencer; //sequencet
+
+
+
+class ac_driver extends uvm_driver #(ac_byte_item); //driver
+  `uvm_component_utils(ac_driver)
+  virtual argus_if vif;
+
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    if (!uvm_config_db #(virtual argus_if)::get(this, "", "vif", vif))
+      `uvm_fatal("NOVIF", "driver: no vif in config_db")
+  endfunction
+
+  task run_phase(uvm_phase phase);
+    ac_byte_item req;
+    vif.bs_valid = 0;
+    vif.bs_data = 0;
+    while (vif.rst) @(posedge vif.clk);
+    @(posedge vif.clk);
+    forever begin
+      seq_item_port.get_next_item(req);
+      drive(req);
+      seq_item_port.item_done();
+    end
+  endtask
+
+  task drive(ac_byte_item item); //handshake occurs at the posedge where both are high; DUT captures there.
+  //combinational, sample at posedge active
+    @(posedge vif.clk); #1;
+    vif.bs_valid = 1;
+    vif.bs_data = item.data;
+    @(posedge vif.clk);
+    while (!vif.bs_ready) @(posedge vif.clk);
+    #2;
+    vif.bs_valid = 0;
+  endtask
+endclass
+
 endpackage
