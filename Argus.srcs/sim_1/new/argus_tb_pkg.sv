@@ -108,4 +108,51 @@ class ac_driver extends uvm_driver #(ac_byte_item); //driver
 endclass
 
 
+class ac_monitor extends uvm_monitor; //monitor
+  `uvm_component_utils(ac_monitor)
+  virtual argus_if vif;
+
+  uvm_analysis_port #(ac_byte_item) bytes_ap;
+  uvm_analysis_port #(ac_match_item) matches_ap;
+
+  int byte_cnt;
+
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    bytes_ap = new("bytes_ap", this);
+    matches_ap = new("matches_ap", this);
+    if (!uvm_config_db #(virtual argus_if)::get(this, "", "vif", vif))
+      `uvm_fatal("NOVIF", "monitor: no vif in config_db")
+    byte_cnt = 0;
+  endfunction
+
+  task run_phase(uvm_phase phase); //single loop to check byte stream then match
+    forever begin
+      @(posedge vif.clk);
+
+      if (vif.bs_valid && vif.bs_ready) begin
+        ac_byte_item b;
+        b = ac_byte_item::type_id::create("b");
+        b.data = vif.bs_data;
+        bytes_ap.write(b);
+        byte_cnt++;
+      end
+
+      if (vif.match_valid) begin
+        ac_match_item m;
+        m = ac_match_item::type_id::create("m");
+        m.match_id = vif.match_id;
+        m.byte_cnt = byte_cnt;
+        matches_ap.write(m);
+        `uvm_info("MON", $sformatf("match id=%0d byte_cnt=%0d (idx=%0d)",
+          m.match_id, m.byte_cnt, m.byte_cnt - 1), UVM_LOW)
+      end
+    end
+  endtask
+endclass
+
 endpackage
