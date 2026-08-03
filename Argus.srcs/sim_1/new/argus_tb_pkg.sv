@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
 // Company: 
-// Engineer: 
+// Engineer: Rishi Bala
 // 
 // Create Date: 08/03/2026 06:21:10 PM
 // Design Name: 
@@ -20,7 +20,18 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 
-module argus_tb_pkg(
+//module argus_tb_pkg(
 
-    );
-endmodule
+//    );
+//endmodule
+
+`include "uvm_macros.svh"
+
+package argus_tb_pkg;
+
+import uvm_pkg::*;
+
+`uvm_analysis_imp_decl(_bytes)
+`uvm_analysis_imp_decl(_matches)
+
+endpackage
