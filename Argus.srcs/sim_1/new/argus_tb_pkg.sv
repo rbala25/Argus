@@ -377,5 +377,20 @@ class directed_test extends ac_base_test;
   endtask
 endclass
 
+class rand_test extends ac_base_test;
+  `uvm_component_utils(rand_test)
+
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+  endfunction
+
+  task run_body(uvm_phase phase);
+    rand_seq seq = rand_seq::type_id::create("seq");
+    if (!seq.randomize())
+      `uvm_fatal("RAND", "rand_seq randomize failed")
+    seq.start(env.agent.seqr);
+  endtask
+endclass
+
 
 endpackage
