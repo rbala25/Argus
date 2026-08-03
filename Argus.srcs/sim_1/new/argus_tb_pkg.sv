@@ -290,4 +290,54 @@ class ac_env extends uvm_env; //env
   endfunction
 endclass
 
+
+
+
+class directed_seq extends uvm_sequence #(ac_byte_item);
+  `uvm_object_utils(directed_seq)
+
+  function new(string name = "directed_seq");
+    super.new(name);
+  endfunction
+
+  task body();
+    byte ts[] = '{
+      "a","t","t","a","c","k",
+      "Z","Z","Z","Z","Z","Z","Z","Z","Z","Z",
+      "Z","Z","Z","Z","Z","Z","Z","Z","Z",
+      "c","m","d",".","e","x","e",
+      "Z","Z","Z","Z","Z","Z","Z","Z", //filler byte z bc that doesnt exist anywhere
+      "m","a","l","w","a","r","e"
+    };
+    foreach (ts[i]) begin
+      ac_byte_item item = ac_byte_item::type_id::create("item");
+      start_item(item);
+      item.data = ts[i];
+      finish_item(item);
+    end
+  endtask
+endclass
+
+class rand_seq extends uvm_sequence #(ac_byte_item);
+  `uvm_object_utils(rand_seq)
+
+  rand int unsigned num_bytes;
+  constraint c_len { num_bytes inside {[64:256]}; }
+
+  function new(string name = "rand_seq");
+    super.new(name);
+  endfunction
+
+  task body();
+    repeat (num_bytes) begin
+      ac_byte_item item = ac_byte_item::type_id::create("item");
+      start_item(item);
+      if (!item.randomize())
+        `uvm_warning("RAND", "item randomize failed")
+      finish_item(item);
+    end
+  endtask
+endclass
+
+
 endpackage
