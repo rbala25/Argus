@@ -339,5 +339,43 @@ class rand_seq extends uvm_sequence #(ac_byte_item);
   endtask
 endclass
 
+class ac_base_test extends uvm_test;
+  `uvm_component_utils(ac_base_test)
+
+  ac_env env;
+
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    env = ac_env::type_id::create("env", this);
+  endfunction
+
+  task run_phase(uvm_phase phase);
+    phase.raise_objection(this);
+    run_body(phase);
+    #5000; 
+    phase.drop_objection(this);
+  endtask
+
+  virtual task run_body(uvm_phase phase);
+  endtask
+endclass
+
+class directed_test extends ac_base_test;
+  `uvm_component_utils(directed_test)
+
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+  endfunction
+
+  task run_body(uvm_phase phase);
+    directed_seq seq = directed_seq::type_id::create("seq");
+    seq.start(env.agent.seqr);
+  endtask
+endclass
+
 
 endpackage
