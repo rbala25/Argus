@@ -268,4 +268,26 @@ class ac_agent extends uvm_agent; //agent
   endfunction
 endclass
 
+class ac_env extends uvm_env; //env
+  `uvm_component_utils(ac_env)
+
+  ac_agent agent;
+  ac_scoreboard sb;
+
+  function new(string name, uvm_component parent);
+    super.new(name, parent);
+  endfunction
+
+  function void build_phase(uvm_phase phase);
+    super.build_phase(phase);
+    agent = ac_agent::type_id::create("agent", this);
+    sb    = ac_scoreboard::type_id::create("sb",    this);
+  endfunction
+
+  function void connect_phase(uvm_phase phase);
+    agent.mon.bytes_ap.connect(sb.bytes_imp);
+    agent.mon.matches_ap.connect(sb.matches_imp);
+  endfunction
+endclass
+
 endpackage
