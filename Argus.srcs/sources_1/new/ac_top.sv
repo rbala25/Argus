@@ -45,12 +45,13 @@ module argus_top #(
     parameter int state_w = 6,
     parameter int nLines = 8,
     parameter int mem_lat = 20,
-    parameter string trans_mem = ""
-) (
+    parameter string trans_mem = "",
+    parameter string match_mem = ""
+)(
     input logic clk,
     input logic rst,
-    byte_stream.src_mp bs,
-    match_out.src_mp match,
+    byte_stream bs,
+    match_out match,
     output logic [31:0] hits,
     output logic [31:0] misses
 );
@@ -58,11 +59,11 @@ module argus_top #(
 mem i_mc();
 mem i_cs();
 
-ac_matcher #(.STATE_W(state_w)) u_matcher (
-    .clk(clk), .rst(rst),
-    .bs(bs),
-    .mem_if(i_mc.mem_mp),
-    .match(match)
+ac_matcher #(.MATCH_FILE(match_mem)) u_matcher (
+    .clk(clk), .rst_n(~rst),
+    .stream(bs),
+    .mem_bus(i_mc),
+    .mout(match)
 );
 
 cache #(.state_w(state_w), .nLines(nLines)) u_cache (
@@ -73,12 +74,8 @@ cache #(.state_w(state_w), .nLines(nLines)) u_cache (
     .misses(misses)
 );
 
-slow_mem #(
-    .STATE_W(state_w),
-    .MEM_LATENCY(mem_lat),
-    .TRANS_MEM(trans_mem)
-) u_slow_mem (
-    .clk(clk), .rst(rst),
-    .mem_if(i_cs.cache_mp)
+slow_mem #(.latency(mem_lat), .mem_file(trans_mem)) u_slow_mem (
+    .clk(clk), .rst_n(~rst),
+    .mem_bus(i_cs)
 );
 endmodule

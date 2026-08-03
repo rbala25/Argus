@@ -29,22 +29,37 @@ initial clk = 0;
 always #5 clk = ~clk; //10ns
 
 byte_stream stream_if(clk, rst_n);
-mem mem_if(clk, rst_n); //interfaces
+//mem mem_if(clk, rst_n); //interfaces
 match_out match_if(clk, rst_n);
 
-ac_matcher #(.MATCH_FILE("C:/Vivado/Argus/scripts/match.mem")) matcher(
-  .clk(clk),
-  .rst_n(rst_n),
-  .stream(stream_if),
-  .mem_bus(mem_if),
-  .mout(match_if)
+//ac_matcher #(.MATCH_FILE("C:/Vivado/Argus/scripts/match.mem")) matcher(
+//  .clk(clk),
+//  .rst_n(rst_n),
+//  .stream(stream_if),
+//  .mem_bus(mem_if),
+//  .mout(match_if)
+//);
+
+//slow_mem #(.latency(5), .mem_file("C:/Vivado/Argus/scripts/transition.mem")) model(
+//  .clk(clk),
+//  .rst_n(rst_n),
+//  .mem_bus(mem_if)
+//);
+
+logic [31:0] hits, misses;
+argus_top #(
+    .match_mem("C:/Vivado/Argus/scripts/match.mem"),
+    .trans_mem("C:/Vivado/Argus/scripts/transition.mem"),
+    .mem_lat(5)
+) u_top (
+    .clk(clk),
+    .rst(~rst_n),
+    .bs(stream_if),
+    .match(match_if),
+    .hits(hits),
+    .misses(misses)
 );
 
-slow_mem #(.latency(5), .mem_file("C:/Vivado/Argus/scripts/transition.mem")) model(
-  .clk(clk),
-  .rst_n(rst_n),
-  .mem_bus(mem_if)
-);
 string test_str = "attack detected, running cmd.exe, found malware";
 
 task automatic drive_bytes(input string s);
