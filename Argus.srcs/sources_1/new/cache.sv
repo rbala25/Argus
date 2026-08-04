@@ -137,5 +137,80 @@ always_comb begin
     endcase
 end
 
+typedef enum logic [2:0] {boot, pload, pgap, idle, fetch, fill} cst_t;
+cst_t cs;
+
+always_ff @(posedge clk)
+    if (rst) lfsr <= 16'hACE1;
+    else lfsr <= {lfsr[14:0], lfsr[15] ^ lfsr[13] ^ lfsr[12] ^ lfsr[10]};
+
+assign ready = (cs != boot && cs != pload && cs != pgap);
+
+assign from_matcher.ack = (cs == idle && from_matcher.req && hit) || (cs == fill);
+assign from_matcher.row_data = (cs == fill) ? cdata[vlat] : cdata[hit_way];
+assign to_sm.req = (cs == pload || cs == fetch);
+assign to_sm.state_addr = (cs == pload) ? HOT_STATES[preload_idx*state_w +: state_w] : pend_addr;
+
+always_ff @(posedge clk) begin
+    if (rst) begin
+        cs <= boot;
+        preload_idx <= 0; fifo_ptr <= 0;
+        hits <= 0; misses <= 0;
+        for (int i = 0; i < nLines; i++) begin
+            cvalid[i] <= 0;
+            age[i] <= WAYS_W'(i);
+        end
+    end else case (cs)
+
+        boot: cs <= (POLICY == 0) ? pload : idle;
+
+        pload: if (to_sm.ack) begin
+            cdata[preload_idx] <= to_sm.row_data;
+            ctag[preload_idx] <= HOT_STATES[preload_idx*state_w +: state_w];
+            cvalid[preload_idx] <= 1;
+            cs <= pgap;
+        end
+
+        pgap: begin
+            if (preload_idx == WAYS_W'(nLines-1)) cs <= idle;
+            else begin
+                preload_idx <= preload_idx + 1;
+                cs <= pload;
+            end
+        end
+
+        idle: if (from_matcher.req) begin
+            if (hit) begin
+                hits <= hits + 1;
+                if (POLICY == 2)
+                    for (int i = 0; i < nLines; i++)
+                        age[i] <= (i == int'(hit_way)) ? 0 :
+                                   (age[i] < WAYS_W'(nLines-1)) ? age[i]+1 : age[i];
+            end else begin
+                misses <= misses + 1;
+                pend_addr <= from_matcher.state_addr;
+                vlat <= victim;
+                cs <= fetch;
+            end
+        end
+
+        fetch: if (to_sm.ack) begin
+            cdata[vlat] <= to_sm.row_data;
+            ctag[vlat] <= pend_addr;
+            cvalid[vlat] <= 1;
+            cs <= fill;
+        end
+
+        fill: begin
+            if (POLICY == 1) fifo_ptr <= fifo_ptr + 1;
+            if (POLICY == 2)
+                for (int i = 0; i < nLines; i++)
+                    age[i] <= (i == int'(vlat)) ? 0 :
+                               (age[i] < WAYS_W'(nLines-1)) ? age[i]+1 : age[i];
+            cs <= idle;
+        end
+
+    endcase
+end
 
 endmodule
