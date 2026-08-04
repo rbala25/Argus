@@ -46,34 +46,34 @@ module argus_top #(
     parameter int nLines = 8,
     parameter int mem_lat = 20,
     parameter string trans_mem = "",
-    parameter string match_mem = ""
+    parameter string match_mem = "",
+    parameter int POLICY = 0,
+    parameter [nLines*state_w-1:0] HOT_STATES = 0
 )(
     input logic clk,
     input logic rst,
     byte_stream bs,
     match_out match,
     output logic [31:0] hits,
-    output logic [31:0] misses
+    output logic [31:0] misses,
+    output logic ready
 );
-
 mem i_mc();
 mem i_cs();
-
 ac_matcher #(.MATCH_FILE(match_mem)) u_matcher (
     .clk(clk), .rst_n(~rst),
     .stream(bs),
     .mem_bus(i_mc),
     .mout(match)
 );
-
-cache #(.state_w(state_w), .nLines(nLines)) u_cache (
+cache #(.state_w(state_w), .nLines(nLines), .POLICY(POLICY), .HOT_STATES(HOT_STATES)) u_cache (
     .clk(clk), .rst(rst),
     .from_matcher(i_mc.cache_mp),
     .to_sm(i_cs.mem_mp),
     .hits(hits),
-    .misses(misses)
+    .misses(misses),
+    .ready(ready)
 );
-
 slow_mem #(.latency(mem_lat), .mem_file(trans_mem)) u_slow_mem (
     .clk(clk), .rst_n(~rst),
     .mem_bus(i_cs)
