@@ -132,7 +132,8 @@ module tb_top;
 
   argus_top #( //absolute paths
     .trans_mem("C:/Vivado/Argus/scripts/transition.mem"),
-    .match_mem("C:/Vivado/Argus/scripts/match.mem")
+    .match_mem("C:/Vivado/Argus/scripts/match.mem"),
+    .POLICY(2)
   ) dut (
     .clk(clk),
     .rst(rst),
