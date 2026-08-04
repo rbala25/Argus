@@ -99,5 +99,43 @@ module cache #(
     output logic ready
 );
 
+localparam WAYS_W = $clog2(nLines);
+localparam rowW = 256 * state_w;
+
+logic [rowW-1:0] cdata [nLines];
+logic [state_w-1:0] ctag [nLines];
+logic cvalid [nLines];
+
+logic hit;
+logic [WAYS_W-1:0] hit_way;
+always_comb begin
+    hit = 0; hit_way = 0;
+    for (int i = 0; i < nLines; i++)
+        if (cvalid[i] && ctag[i] == from_matcher.state_addr) begin
+            hit = 1;
+            hit_way = WAYS_W'(i);
+        end
+end
+
+logic [WAYS_W-1:0] age [nLines];
+logic [WAYS_W-1:0] fifo_ptr;
+logic [15:0] lfsr;
+logic [WAYS_W-1:0] victim, vlat;
+logic [WAYS_W-1:0] preload_idx;
+logic [state_w-1:0] pend_addr;
+
+always_comb begin
+    victim = 0;
+    case (POLICY)
+        1: victim = fifo_ptr;
+        2: begin
+            for (int i = 1; i < nLines; i++)
+                if (age[i] > age[victim]) victim = WAYS_W'(i);
+        end
+        3: victim = lfsr[WAYS_W-1:0];
+        default: victim = fifo_ptr;
+    endcase
+end
+
 
 endmodule
