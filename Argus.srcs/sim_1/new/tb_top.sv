@@ -25,15 +25,15 @@ import argus_tb_pkg::*;
 
 module tb_top;
 
-logic clk;
-logic rst_n;
+//logic clk;
+//logic rst_n;
 
-initial clk = 0;
-always #5 clk = ~clk; //10ns
+//initial clk = 0;
+//always #5 clk = ~clk; //10ns
 
-byte_stream stream_if(clk, rst_n);
+//byte_stream stream_if(clk, rst_n);
 //mem mem_if(clk, rst_n); //interfaces
-match_out match_if(clk, rst_n);
+//match_out match_if(clk, rst_n);
 
 //ac_matcher #(.MATCH_FILE("C:/Vivado/Argus/scripts/match.mem")) matcher(
 //  .clk(clk),
@@ -119,8 +119,8 @@ match_out match_if(clk, rst_n);
   argus_if #(.MATCH_W(4), .STATE_W(6)) ai(.clk(clk)); //flat
   assign ai.rst = rst;
 
-  byte_stream bs();
-  match_out match();
+  byte_stream bs(.clk(clk));
+  match_out match(.clk(clk));
 
   assign bs.valid = ai.bs_valid;
   assign bs.data = ai.bs_data;
@@ -131,8 +131,8 @@ match_out match_if(clk, rst_n);
   assign ai.match_state = match.current_state;
 
   argus_top #( //absolute paths
-    .TRANS_FILE("C:/path/to/transition.mem"),
-    .MATCH_FILE("C:/path/to/match.mem")
+    .trans_mem("C:/Vivado/Argus/scripts/transition.mem"),
+    .match_mem("C:/Vivado/Argus/scripts/match.mem")
   ) dut (
     .clk(clk),
     .rst(rst),
