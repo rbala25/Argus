@@ -26,16 +26,15 @@ interface argus_if #( //argus top io
 )(input logic clk);
 
   logic rst;
-
   logic bs_valid;
   logic [7:0] bs_data;
+  
   logic bs_ready;
-
   logic match_valid;
   logic [MATCH_W-1:0] match_id;
   logic [STATE_W-1:0] match_state;
-
+  
   logic [31:0] hits;
   logic [31:0] misses;
-
+  logic ready;
 endinterface
