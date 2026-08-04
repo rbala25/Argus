@@ -87,6 +87,8 @@ class ac_driver extends uvm_driver #(ac_byte_item); //driver
     vif.bs_valid = 0;
     vif.bs_data = 0;
     while (vif.rst) @(posedge vif.clk);
+    wait(vif.ready);
+    
     @(posedge vif.clk);
     forever begin
       seq_item_port.get_next_item(req);
@@ -100,6 +102,7 @@ class ac_driver extends uvm_driver #(ac_byte_item); //driver
     @(posedge vif.clk); #1;
     vif.bs_valid = 1;
     vif.bs_data = item.data;
+    
     @(posedge vif.clk);
     while (!vif.bs_ready) @(posedge vif.clk);
     #2;
@@ -155,45 +158,58 @@ class ac_monitor extends uvm_monitor; //monitor
   endtask
 endclass
 
-class ac_scoreboard extends uvm_scoreboard; //scoreboard
+class ac_scoreboard extends uvm_scoreboard;
   `uvm_component_utils(ac_scoreboard)
 
   uvm_analysis_imp_bytes #(ac_byte_item, ac_scoreboard) bytes_imp;
   uvm_analysis_imp_matches #(ac_match_item, ac_scoreboard) matches_imp;
+
+  virtual argus_if vif;
 
   byte byte_buf[$];
   ac_match_item match_q[$];
   string patterns[int];
 
   function new(string name, uvm_component parent);
+    
     super.new(name, parent);
+    
   endfunction
 
   function void build_phase(uvm_phase phase);
+  
     super.build_phase(phase);
     bytes_imp = new("bytes_imp", this);
-    matches_imp = new("matches_imp", this); //check this again
+    matches_imp = new("matches_imp", this);
+    
+    if (!uvm_config_db #(virtual argus_if)::get(this, "", "vif", vif)) `uvm_fatal("NOVIF", "scoreboard: no vif in config_db")
+   
     patterns[5] = "cmd.exe";
     patterns[6] = "attack";
     patterns[7] = "malware";
   endfunction
 
   function void write_bytes(ac_byte_item item);
+  
     byte_buf.push_back(byte'(item.data));
+    
   endfunction
 
   function void write_matches(ac_match_item item);
+  
     ac_match_item copy;
     copy = ac_match_item::type_id::create("copy");
     copy.match_id = item.match_id;
     copy.byte_cnt = item.byte_cnt;
     match_q.push_back(copy);
+    
   endfunction
 
   function void check_phase(uvm_phase phase);
+  
     super.check_phase(phase);
-    `uvm_info("SB", $sformatf("stream=%0d bytes  matches=%0d",
-      byte_buf.size(), match_q.size()), UVM_LOW)
+    `uvm_info("SB", $sformatf("stream=%0d bytes  matches=%0d  hits=%0d  misses=%0d",
+      byte_buf.size(), match_q.size(), vif.hits, vif.misses), UVM_LOW)
     check_false_positives();
     check_false_negatives();
   endfunction
@@ -213,6 +229,7 @@ class ac_scoreboard extends uvm_scoreboard; //scoreboard
   endfunction
 
   function void check_false_negatives(); //present patterns
+  
     foreach (patterns[id]) begin
       if (pat_in_buf(patterns[id]) && !id_matched(id))
         `uvm_error("SB", $sformatf("FALSE NEG: id=%0d (%s) in stream, no match fired",
@@ -224,6 +241,7 @@ class ac_scoreboard extends uvm_scoreboard; //scoreboard
     int plen = pat.len();
     int blen = byte_buf.size();
     if (plen > blen) return 0;
+    
     for (int i = 0; i <= blen - plen; i++) begin
       bit ok = 1;
       for (int j = 0; j < plen; j++) begin
@@ -233,6 +251,7 @@ class ac_scoreboard extends uvm_scoreboard; //scoreboard
       end
       if (ok) return 1;
     end
+    
     return 0;
   endfunction
 
@@ -329,6 +348,7 @@ class rand_seq extends uvm_sequence #(ac_byte_item);
   endfunction
 
   task body();
+  
     repeat (num_bytes) begin
       ac_byte_item item = ac_byte_item::type_id::create("item");
       start_item(item);
@@ -372,6 +392,7 @@ class directed_test extends ac_base_test;
   endfunction
 
   task run_body(uvm_phase phase);
+  
     directed_seq seq = directed_seq::type_id::create("seq");
     seq.start(env.agent.seqr);
   endtask
@@ -385,6 +406,7 @@ class rand_test extends ac_base_test;
   endfunction
 
   task run_body(uvm_phase phase);
+  
     rand_seq seq = rand_seq::type_id::create("seq");
     if (!seq.randomize())
       `uvm_fatal("RAND", "rand_seq randomize failed")

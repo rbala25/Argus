@@ -139,7 +139,8 @@ module tb_top;
     .bs(bs),
     .match(match),
     .hits(ai.hits),
-    .misses(ai.misses)
+    .misses(ai.misses),
+    .ready(ai.ready)
   );
 
   initial begin
